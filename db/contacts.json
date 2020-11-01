@@ -6,12 +6,6 @@
   "phone": "(992) 914-3792"
  },
  {
-  "id": 2,
-  "name": "Chaim Lewis",
-  "email": "dui.in@egetlacus.ca",
-  "phone": "(294) 840-6685"
- },
- {
   "id": 4,
   "name": "Wylie Pope",
   "email": "est@utquamvel.net",
@@ -42,12 +36,6 @@
   "phone": "(233) 738-2360"
  },
  {
-  "id": 9,
-  "name": "Thomas Lucas",
-  "email": "nec@Nulla.com",
-  "phone": "(704) 398-7993"
- },
- {
   "id": 10,
   "name": "Alec Howard",
   "email": "Donec.elementum@scelerisquescelerisquedui.net",
@@ -55,30 +43,6 @@
  },
  {
   "id": 11,
-  "name": "Mango",
-  "email": "mango@gmail.com",
-  "phone": "322-22-22"
- },
- {
-  "id": 12,
-  "name": "Mango",
-  "email": "mango@gmail.com",
-  "phone": "322-22-22"
- },
- {
-  "id": 13,
-  "name": "Mango",
-  "email": "mango@gmail.com",
-  "phone": "322-22-22"
- },
- {
-  "id": 14,
-  "name": "Mango",
-  "email": "mango@gmail.com",
-  "phone": "322-22-22"
- },
- {
-  "id": 15,
   "name": "Mango",
   "email": "mango@gmail.com",
   "phone": "322-22-22"
