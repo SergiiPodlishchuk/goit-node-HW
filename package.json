@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  // "type": "module",
   "scripts": {
-    "start":"index.js --node",
-    "dev":"index.js --nodemon"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "repository": {
     "type": "git",
@@ -19,6 +18,9 @@
   },
   "homepage": "https://github.com/SergiiPodlishchuk/goit-node-hw#readme",
   "dependencies": {
+    "yargs": "^16.1.0"
+  },
+  "devDependencies": {
     "nodemon": "^2.0.6"
   }
 }
