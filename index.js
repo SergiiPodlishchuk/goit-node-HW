@@ -1,4 +1,3 @@
-const contacts = require("./contacts.js");
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -13,6 +12,7 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:3010" }));
+app.use(morgan("combined"));
 
 const contactsRouter = express.Router();
 app.use("/api/contacts", contactsRouter);
