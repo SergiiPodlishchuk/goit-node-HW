@@ -1,12 +1,42 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
-const fs = require("fs");
-const path = require("path");
+const mongoose = require("mongoose");
+
+const { Schema } = mongoose;
 
 const PORT = 3010;
+const MONGO_DB_URL =
+  "mongodb+srv://podluy23:magazin12@cluster0.s8rqh.mongodb.net/db_contacts";
 
-const contactsPath = path.join(__dirname, "/db/contacts.json");
+async function connect_DB() {
+  return await mongoose.connect(
+    MONGO_DB_URL,
+    {
+      useUnifiedTopology: true,
+    },
+    function (error) {
+      if (error) {
+        console.log(error);
+        process.exit(1);
+      }
+      console.log("Database connection successful");
+    }
+  );
+}
+
+connect_DB();
+
+const contactSchema = new Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String, required: true },
+  subscription: { type: String, required: true },
+  password: { type: String, required: true },
+  token: { type: String, required: false },
+});
+
+const contactModel = mongoose.model("Contact", contactSchema);
 
 const app = express();
 
@@ -23,110 +53,70 @@ contactsRouter.post("/", addContact);
 contactsRouter.delete("/:contactId", removeContact);
 contactsRouter.patch("/:contactId", updateContact);
 
-function listContacts(req, res, next) {
-  fs.readFile(contactsPath, "utf8", (err, data) => {
-    if (err) throw err;
-    res.status(200).send(JSON.parse(data));
-  });
+async function listContacts(req, res, next) {
+  try {
+    const listContact = await contactModel.find();
+    res.status(200).json(listContact);
+    console.log(listContacts);
+  } catch (error) {
+    next(error);
+  }
 }
 
-function getById(req, res, next) {
-  fs.readFile(contactsPath, "utf8", (err, data) => {
-    const contactById = JSON.parse(data).find(
-      (contact) => contact.id === parseInt(req.params.contactId)
+async function getById(req, res, next) {
+  try {
+    const contactId = req.params.contactId;
+    const contactById = await contactModel.findById(contactId);
+
+    if (!contactById) {
+      return res.status(404).send();
+    }
+
+    return res.status(200).json(contactById);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function addContact(req, res, next) {
+  try {
+    const contactCreate = await contactModel.create(req.body);
+    return res.status(201).json(contactCreate);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function removeContact(req, res, next) {
+  try {
+    const contactId = req.params.contactId;
+    const deleteContact = await contactModel.findByIdAndDelete(contactId);
+
+    if (!deleteContact) {
+      return res.status(404).send();
+    }
+
+    return res.status(204).json(deleteContact);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function updateContact(req, res, next) {
+  try {
+    const contactId = req.params.contactId;
+    const updateContact = await contactModel.findByIdAndUpdate(
+      contactId,
+      req.body
     );
-    if (contactById) {
-      res.status(200).send(contactById);
-    } else {
-      res.status(404).send({ message: "Not found" });
+    if (!updateContact) {
+      return res.status(404).send();
     }
-  });
-}
-
-function addContact(req, res, next) {
-  fs.readFile(contactsPath, "utf8", (err, data) => {
-    const users = JSON.parse(data);
-    const newUser = {
-      ...req.body,
-      id: users.length + 1,
-    };
-    users.push(newUser);
-    const content = JSON.stringify(users, null, 1);
-    fs.writeFile(contactsPath, content, (err, data) => {});
-    console.log(req.body.name === undefined);
-
-    let name_Field = "";
-
-    if (req.body.name === undefined) {
-      name_Field = "name";
-    } else if (req.body.email === undefined) {
-      name_Field = "email";
-    } else if (req.body.phone === undefined) {
-      name_Field = "phone";
-    }
-
-    if (name_Field !== "") {
-      return res
-        .status(400)
-        .send({ message: `missing required ${name_Field}` });
-    } else {
-      return res.status(201).send(newUser);
-    }
-  });
-}
-
-function removeContact(req, res, next) {
-  fs.readFile(contactsPath, "utf8", (err, data) => {
-    const users = JSON.parse(data);
-    const userById = users.find(
-      (user) => user.id === parseInt(req.params.contactId)
-    );
-    const indexUser = users.indexOf(userById);
-    users.splice(indexUser, 1);
-    const content = JSON.stringify(users, null, 1);
-    fs.writeFile(contactsPath, content, (err, data) => {});
-    if (userById) {
-      res.status(200).send({ message: "contact deleted" });
-    } else {
-      res.status(404).send({ message: "Not found" });
-    }
-  });
-}
-
-function updateContact(req, res, next) {
-  fs.readFile(contactsPath, "utf8", (err, data) => {
-    const users = JSON.parse(data);
-    const userById = users.find(
-      (user) => user.id === parseInt(req.params.contactId)
-    );
-    const indexUser = users.indexOf(userById);
-    users[indexUser] = {
-      ...users[indexUser],
-      ...req.body,
-    };
-    const content = JSON.stringify(users, null, 1);
-    fs.writeFile(contactsPath, content, (err, data) => {});
-
-    let name_Field = "";
-
-    if (req.body.name) {
-      name_Field = req.body.name;
-    } else if (req.body.email) {
-      name_Field = req.body.email;
-    } else if (req.body.phone) {
-      name_Field = req.body.phone;
-    }
-
-    if (name_Field === "") {
-      return res.status(400).send({ message: "missing fields" });
-    }
-
-    if (userById) {
-      return res.status(200).send(users[indexUser]);
-    } else {
-      return res.status(404).send({ message: "Not found" });
-    }
-  });
+    console.log(updateContact);
+    return res.status(204).send(updateContact);
+  } catch (error) {
+    next(error);
+  }
 }
 
 app.listen(PORT, () => {
