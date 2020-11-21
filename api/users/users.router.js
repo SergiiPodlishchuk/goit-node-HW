@@ -22,5 +22,9 @@ userRouter.get(
   usersControllers.authorization,
   usersControllers.getCurrentUser
 );
-
+userRouter.patch(
+  "/user/:id",
+  usersControllers.validateUserId,
+  usersControllers.updateSubscribe
+);
 module.exports = userRouter;

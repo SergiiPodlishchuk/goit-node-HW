@@ -2,11 +2,13 @@ const bcryptjs = require("bcryptjs");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
 const userModel = require("./users.model");
-
-const _costFactor = 4;
+const {
+  Types: { ObjectId },
+} = require("mongoose");
 
 async function registerUser(req, res, next) {
   try {
+    const _costFactor = 4;
     const { password, email } = req.body;
 
     const passwordHash = await bcryptjs.hash(password, _costFactor);
@@ -114,6 +116,44 @@ function validateUser(req, res, next) {
   }
   next();
 }
+function validateUserId(req, res, next) {
+  const { id } = req.params;
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send();
+  }
+  next();
+}
+
+async function updateSubscribe(req, res, next) {
+  try {
+    const userId = req.params.id;
+
+    switch (req.body.subscription) {
+      case "free":
+        sub = "free";
+        break;
+
+      case "pro":
+        sub = "pro";
+        break;
+
+      case "premium":
+        sub = "premium";
+        break;
+
+      default:
+        return res.status(400).send("only free, pro, premium");
+    }
+
+    const userForUpdate = await userModel.findByIdAndUpdate(userId, req.body);
+    if (!userForUpdate) {
+      return res.status(404).send();
+    }
+    return res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
 
 module.exports = {
   registerUser,
@@ -122,4 +162,6 @@ module.exports = {
   logoutUser,
   getCurrentUser,
   validateUser,
+  validateUserId,
+  updateSubscribe,
 };

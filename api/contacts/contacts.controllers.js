@@ -6,9 +6,25 @@ const {
 
 async function listContacts(req, res, next) {
   try {
+    const listFilterSub = await contactModel.find({
+      subscription: req.query.sub,
+    });
+    if (req.query.sub) {
+      return res.status(200).json(listFilterSub);
+    }
+
+    const listPagContact = await contactModel.paginate(
+      {},
+      { page: req.query.page, limit: req.query.limit },
+      function (err, result) {
+        return result.docs;
+      }
+    );
+    if (req.query.page) {
+      return res.status(200).json(listPagContact);
+    }
     const listContact = await contactModel.find();
-    res.status(200).json(listContact);
-    console.log(listContacts);
+    return res.status(200).json(listContact);
   } catch (error) {
     next(error);
   }
@@ -74,7 +90,6 @@ function validateId(req, res, next) {
   }
   next();
 }
-
 function validateContact(req, res, next) {
   const validationRules = Joi.object({
     name: Joi.string().required(),
@@ -89,7 +104,6 @@ function validateContact(req, res, next) {
   }
   next();
 }
-
 function validateUpdateContact(req, res, next) {
   const validationRules = Joi.object({
     name: Joi.string(),
