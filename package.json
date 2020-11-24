@@ -31,5 +31,14 @@
   "bugs": {
     "url": "https://github.com/SergiiPodlishchuk/goit-node-hw/issues"
   },
-  "homepage": "https://github.com/SergiiPodlishchuk/goit-node-hw#readme"
+  "homepage": "https://github.com/SergiiPodlishchuk/goit-node-hw#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0",
+    "uuid": "^8.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.6"
+  }
 }
