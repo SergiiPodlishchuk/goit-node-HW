@@ -1,7 +1,6 @@
 const bcryptjs = require("bcryptjs");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
-const { AvatarGenerator } = require("random-avatar-generator");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
@@ -9,14 +8,14 @@ const {
   Types: { ObjectId },
 } = require("mongoose");
 const express = require("express");
-const http = require("http");
+const Avatar = require("avatar-builder");
 
 const userModel = require("./users.model");
 
 async function registerUser(req, res, next) {
   try {
     const _costFactor = 4;
-    const { password, email, avatarURL } = req.body;
+    const { password, email } = req.body;
 
     const passwordHash = await bcryptjs.hash(password, _costFactor);
     const existingUser = await userModel.findOne({ email });
@@ -24,22 +23,29 @@ async function registerUser(req, res, next) {
     if (existingUser) {
       return res.status(409).send("Email in use");
     }
-    const img = avatarGenerate();
-    const app = express();
 
-    app.get(img, function (res) {
-      res.pipe(fs.createWriteStream("file.svg"));
-    });
+    const nameFromEmail = email.slice(0, email.indexOf("@"));
+    const avatar = Avatar.male8bitBuilder(128);
+    const buffer = await avatar.create(nameFromEmail);
+    fs.writeFile(`tmp/${nameFromEmail}.png`, buffer, () => {});
+
+    const readableStream = fs.createReadStream(`tmp/${nameFromEmail}.png`);
+    const writeableStream = fs.createWriteStream(
+      `public/images/${nameFromEmail}.png`
+    );
+    readableStream.pipe(writeableStream);
+    const avatarURL = `http://locahost:3010/images/${nameFromEmail}.png`;
 
     const user = await userModel.create({
       email,
       password: passwordHash,
-      avatarURL: img,
+      avatarURL: avatarURL,
     });
+
     return res.status(201).json({
       user: {
         email,
-        avatarURL: img,
+        avatarURL: avatarURL,
         subscription: "free",
       },
     });
@@ -171,18 +177,17 @@ async function updateSubscribe(req, res, next) {
   }
 }
 
-function avatarGenerate() {
-  const generator = new AvatarGenerator();
-  const img = generator.generateRandomAvatar();
+function avatarGenerate(email) {
+  const avatarSave = `tmp/${email}.svg`;
 
-  console.log(fs);
-  console.log(path);
-  const storage = multer.diskStorage({
-    destination: "tmp",
-    filename: function (req, file, cb) {
-      const ext = path.parse(file.originalname).ext;
-      cb(null, Date.now() + "avatar" + ext);
-    },
+  fs.open(avatarSave, "w", (err) => {
+    if (err) throw err;
+    console.log("file created");
+  });
+
+  fs.writeFile(avatarSave, (err) => {
+    if (err) throw err;
+    console.log("Data has been replaced!");
   });
 
   return img;

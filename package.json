@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "avatar-builder": "^1.0.1",
     "avatar-generator": "^2.0.4",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
