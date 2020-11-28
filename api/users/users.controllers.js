@@ -1,15 +1,22 @@
 const bcryptjs = require("bcryptjs");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
-const userModel = require("./users.model");
+const { AvatarGenerator } = require("random-avatar-generator");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 const {
   Types: { ObjectId },
 } = require("mongoose");
+const express = require("express");
+const http = require("http");
+
+const userModel = require("./users.model");
 
 async function registerUser(req, res, next) {
   try {
     const _costFactor = 4;
-    const { password, email } = req.body;
+    const { password, email, avatarURL } = req.body;
 
     const passwordHash = await bcryptjs.hash(password, _costFactor);
     const existingUser = await userModel.findOne({ email });
@@ -17,14 +24,22 @@ async function registerUser(req, res, next) {
     if (existingUser) {
       return res.status(409).send("Email in use");
     }
+    const img = avatarGenerate();
+    const app = express();
+
+    app.get(img, function (res) {
+      res.pipe(fs.createWriteStream("file.svg"));
+    });
 
     const user = await userModel.create({
       email,
       password: passwordHash,
+      avatarURL: img,
     });
     return res.status(201).json({
       user: {
         email,
+        avatarURL: img,
         subscription: "free",
       },
     });
@@ -109,6 +124,7 @@ function validateUser(req, res, next) {
   const validationRules = Joi.object({
     email: Joi.string().required(),
     password: Joi.string().required(),
+    avatarURL: Joi.string(),
   });
   const val = validationRules.validate(req.body);
   if (val.error) {
@@ -153,6 +169,23 @@ async function updateSubscribe(req, res, next) {
   } catch (error) {
     next(error);
   }
+}
+
+function avatarGenerate() {
+  const generator = new AvatarGenerator();
+  const img = generator.generateRandomAvatar();
+
+  console.log(fs);
+  console.log(path);
+  const storage = multer.diskStorage({
+    destination: "tmp",
+    filename: function (req, file, cb) {
+      const ext = path.parse(file.originalname).ext;
+      cb(null, Date.now() + "avatar" + ext);
+    },
+  });
+
+  return img;
 }
 
 module.exports = {
