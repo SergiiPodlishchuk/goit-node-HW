@@ -199,7 +199,7 @@ async function updateAvatar(req, res, next) {
       req.user
     );
 
-    return res.status(200).json(req.user);
+    return res.status(200).json({ avatarURL: avatarURL });
   } catch (error) {
     next(error);
   }
