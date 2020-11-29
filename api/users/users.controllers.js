@@ -7,7 +7,6 @@ const multer = require("multer");
 const {
   Types: { ObjectId },
 } = require("mongoose");
-const express = require("express");
 const Avatar = require("avatar-builder");
 
 const userModel = require("./users.model");
@@ -23,17 +22,7 @@ async function registerUser(req, res, next) {
     if (existingUser) {
       return res.status(409).send("Email in use");
     }
-
-    const nameFromEmail = email.slice(0, email.indexOf("@"));
-    const avatar = Avatar.male8bitBuilder(128);
-    const buffer = await avatar.create(nameFromEmail);
-    fs.writeFile(`tmp/${nameFromEmail}.png`, buffer, () => {});
-
-    const readableStream = fs.createReadStream(`tmp/${nameFromEmail}.png`);
-    const writeableStream = fs.createWriteStream(
-      `public/images/${nameFromEmail}.png`
-    );
-    readableStream.pipe(writeableStream);
+    const nameFromEmail = await avatarGenerate(email);
     const avatarURL = `http://locahost:3010/images/${nameFromEmail}.png`;
 
     const user = await userModel.create({
@@ -118,11 +107,11 @@ async function logoutUser(req, res, next) {
   }
 }
 async function getCurrentUser(req, res, next) {
-  const { email, subscription } = await req.user;
-
+  const { email, subscription, avatarURL } = await req.user;
   return res.status(200).json({
     email,
     subscription,
+    avatarURL,
   });
 }
 
@@ -176,21 +165,44 @@ async function updateSubscribe(req, res, next) {
     next(error);
   }
 }
+async function avatarGenerate(email) {
+  const nameFromEmail = email.slice(0, email.indexOf("@"));
+  const avatar = Avatar.male8bitBuilder(128);
+  const buffer = await avatar.create(nameFromEmail);
+  const tmpPath = `tmp/${nameFromEmail}.png`;
+  fs.writeFile(tmpPath, buffer, () => {});
+  const readableStream = fs.createReadStream(tmpPath);
+  const writeableStream = fs.createWriteStream(
+    `public/images/${nameFromEmail}.png`
+  );
+  readableStream.pipe(writeableStream);
+  await fs.unlink(tmpPath, () => {});
 
-function avatarGenerate(email) {
-  const avatarSave = `tmp/${email}.svg`;
+  return nameFromEmail;
+}
 
-  fs.open(avatarSave, "w", (err) => {
-    if (err) throw err;
-    console.log("file created");
-  });
+async function updateAvatar(req, res, next) {
+  try {
+    const readableStream = fs.createReadStream(req.file.path);
+    const writeableStream = fs.createWriteStream(
+      `public/images/${req.file.filename}`
+    );
+    readableStream.pipe(writeableStream);
+    await fs.unlink(req.file.path, () => {});
 
-  fs.writeFile(avatarSave, (err) => {
-    if (err) throw err;
-    console.log("Data has been replaced!");
-  });
+    const avatarURL = `http://locahost:3010/images/${req.file.filename}`;
 
-  return img;
+    req.user._doc.avatarURL = avatarURL;
+
+    const userUpdateAvatarUrl = await userModel.findByIdAndUpdate(
+      req.user.id,
+      req.user
+    );
+
+    return res.status(200).json(req.user);
+  } catch (error) {
+    next(error);
+  }
 }
 
 module.exports = {
@@ -202,4 +214,5 @@ module.exports = {
   validateUser,
   validateUserId,
   updateSubscribe,
+  updateAvatar,
 };
