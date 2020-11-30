@@ -43,6 +43,7 @@ userRouter.patch(
 userRouter.patch(
   "/user/:id",
   usersControllers.validateUserId,
+  usersControllers.validateSubscribe,
   usersControllers.updateSubscribe
 );
 

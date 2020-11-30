@@ -1,9 +1,7 @@
 const bcryptjs = require("bcryptjs");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
-const path = require("path");
 const fs = require("fs");
-const multer = require("multer");
 const {
   Types: { ObjectId },
 } = require("mongoose");
@@ -57,10 +55,8 @@ async function loginUser(req, res, next) {
     const payload = process.env.JWT_SECRET;
 
     const token = await jwt.sign(header, payload, {
-      expiresIn: 2 * 24 * 60 * 60,
+      expiresIn: "2 days",
     });
-
-    // await userModel.updateToken(user._id, token);
 
     return res.status(200).json({
       token,
@@ -134,32 +130,27 @@ function validateUserId(req, res, next) {
   }
   next();
 }
+function validateSubscribe(req, res, next) {
+  const subRules = Joi.object({
+    subscription: Joi.any().valid("free", "pro", "premium"),
+  });
+
+  const val = subRules.validate(req.body);
+
+  if (val.error) {
+    return res.status(400).send("only free, pro, premium");
+  }
+  next();
+}
 
 async function updateSubscribe(req, res, next) {
   try {
     const userId = req.params.id;
-
-    switch (req.body.subscription) {
-      case "free":
-        sub = "free";
-        break;
-
-      case "pro":
-        sub = "pro";
-        break;
-
-      case "premium":
-        sub = "premium";
-        break;
-
-      default:
-        return res.status(400).send("only free, pro, premium");
-    }
-
     const userForUpdate = await userModel.findByIdAndUpdate(userId, req.body);
     if (!userForUpdate) {
       return res.status(404).send();
     }
+
     return res.status(204).send();
   } catch (error) {
     next(error);
@@ -213,6 +204,7 @@ module.exports = {
   getCurrentUser,
   validateUser,
   validateUserId,
+  validateSubscribe,
   updateSubscribe,
   updateAvatar,
 };

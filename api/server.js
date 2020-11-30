@@ -15,6 +15,7 @@ const PORT = 3010;
     {
       useUnifiedTopology: true,
       useNewUrlParser: true,
+      useFindAndModify: false,
     },
 
     function (error) {
