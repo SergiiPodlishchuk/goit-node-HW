@@ -1,10 +1,13 @@
 const bcryptjs = require("bcryptjs");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
-const userModel = require("./users.model");
+const fs = require("fs");
 const {
   Types: { ObjectId },
 } = require("mongoose");
+const Avatar = require("avatar-builder");
+
+const userModel = require("./users.model");
 
 async function registerUser(req, res, next) {
   try {
@@ -17,14 +20,19 @@ async function registerUser(req, res, next) {
     if (existingUser) {
       return res.status(409).send("Email in use");
     }
+    const nameFromEmail = await avatarGenerate(email);
+    const avatarURL = `http://locahost:3010/images/${nameFromEmail}.png`;
 
     const user = await userModel.create({
       email,
       password: passwordHash,
+      avatarURL: avatarURL,
     });
+
     return res.status(201).json({
       user: {
         email,
+        avatarURL: avatarURL,
         subscription: "free",
       },
     });
@@ -47,10 +55,8 @@ async function loginUser(req, res, next) {
     const payload = process.env.JWT_SECRET;
 
     const token = await jwt.sign(header, payload, {
-      expiresIn: 2 * 24 * 60 * 60,
+      expiresIn: "2 days",
     });
-
-    // await userModel.updateToken(user._id, token);
 
     return res.status(200).json({
       token,
@@ -97,11 +103,11 @@ async function logoutUser(req, res, next) {
   }
 }
 async function getCurrentUser(req, res, next) {
-  const { email, subscription } = await req.user;
-
+  const { email, subscription, avatarURL } = await req.user;
   return res.status(200).json({
     email,
     subscription,
+    avatarURL,
   });
 }
 
@@ -109,6 +115,7 @@ function validateUser(req, res, next) {
   const validationRules = Joi.object({
     email: Joi.string().required(),
     password: Joi.string().required(),
+    avatarURL: Joi.string(),
   });
   const val = validationRules.validate(req.body);
   if (val.error) {
@@ -123,10 +130,67 @@ function validateUserId(req, res, next) {
   }
   next();
 }
+function validateSubscribe(req, res, next) {
+  const subRules = Joi.object({
+    subscription: Joi.any().valid("free", "pro", "premium"),
+  });
+
+  const val = subRules.validate(req.body);
+
+  if (val.error) {
+    return res.status(400).send("only free, pro, premium");
+  }
+  next();
+}
 
 async function updateSubscribe(req, res, next) {
   try {
     const userId = req.params.id;
+    const userForUpdate = await userModel.findByIdAndUpdate(userId, req.body);
+    if (!userForUpdate) {
+      return res.status(404).send();
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+async function avatarGenerate(email) {
+  const nameFromEmail = email.slice(0, email.indexOf("@"));
+  const avatar = Avatar.male8bitBuilder(128);
+  const buffer = await avatar.create(nameFromEmail);
+  const tmpPath = `tmp/${nameFromEmail}.png`;
+  fs.writeFile(tmpPath, buffer, () => {});
+  const readableStream = fs.createReadStream(tmpPath);
+  const writeableStream = fs.createWriteStream(
+    `public/images/${nameFromEmail}.png`
+  );
+  readableStream.pipe(writeableStream);
+  await fs.unlink(tmpPath, () => {});
+
+  return nameFromEmail;
+}
+
+async function updateAvatar(req, res, next) {
+  try {
+    const readableStream = fs.createReadStream(req.file.path);
+    const writeableStream = fs.createWriteStream(
+      `public/images/${req.file.filename}`
+    );
+    readableStream.pipe(writeableStream);
+    await fs.unlink(req.file.path, () => {});
+
+    const avatarURL = `http://locahost:3010/images/${req.file.filename}`;
+
+    req.user._doc.avatarURL = avatarURL;
+
+    const userUpdateAvatarUrl = await userModel.findByIdAndUpdate(
+      req.user.id,
+      req.user
+    );
+
+    return res.status(200).json({ avatarURL: avatarURL });
 
     switch (req.body.subscription) {
       case "free":
@@ -163,5 +227,7 @@ module.exports = {
   getCurrentUser,
   validateUser,
   validateUserId,
+  validateSubscribe,
   updateSubscribe,
+  updateAvatar,
 };

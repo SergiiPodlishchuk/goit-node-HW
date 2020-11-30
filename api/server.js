@@ -15,6 +15,7 @@ const PORT = 3010;
     {
       useUnifiedTopology: true,
       useNewUrlParser: true,
+      useFindAndModify: false,
     },
 
     function (error) {
@@ -29,6 +30,7 @@ const PORT = 3010;
 
 const app = express();
 
+app.use(express.static("public"));
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:3010" }));
 app.use(morgan("combined"));
