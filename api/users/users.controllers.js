@@ -191,6 +191,29 @@ async function updateAvatar(req, res, next) {
     );
 
     return res.status(200).json({ avatarURL: avatarURL });
+
+    switch (req.body.subscription) {
+      case "free":
+        sub = "free";
+        break;
+
+      case "pro":
+        sub = "pro";
+        break;
+
+      case "premium":
+        sub = "premium";
+        break;
+
+      default:
+        return res.status(400).send("only free, pro, premium");
+    }
+
+    const userForUpdate = await userModel.findByIdAndUpdate(userId, req.body);
+    if (!userForUpdate) {
+      return res.status(404).send();
+    }
+    return res.status(204).send();
   } catch (error) {
     next(error);
   }

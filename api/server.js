@@ -31,7 +31,6 @@ const PORT = 3010;
 const app = express();
 
 app.use(express.static("public"));
-
 app.use(express.json());
 app.use(cors({ origin: "http://localhost:3010" }));
 app.use(morgan("combined"));
