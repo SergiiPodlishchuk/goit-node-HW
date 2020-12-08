@@ -8,6 +8,7 @@ const {
 const Avatar = require("avatar-builder");
 const uuid = require("uuid");
 const sgMail = require("@sendgrid/mail");
+
 const userModel = require("./users.model");
 
 async function registerUser(req, res, next) {
@@ -24,7 +25,6 @@ async function registerUser(req, res, next) {
     const nameFromEmail = await avatarGenerate(email);
     const avatarURL = `http://locahost:3010/images/${nameFromEmail}.png`;
     const verificationToken = await sendRegistrationEmail(req.body);
-
     const user = await userModel.create({
       email,
       password: passwordHash,
@@ -171,6 +171,7 @@ async function avatarGenerate(email) {
 
   return nameFromEmail;
 }
+
 async function updateAvatar(req, res, next) {
   try {
     const readableStream = fs.createReadStream(req.file.path);
@@ -188,7 +189,6 @@ async function updateAvatar(req, res, next) {
       req.user.id,
       req.user
     );
-
     return res.status(200).json({ avatarURL: avatarURL });
   } catch (error) {
     next(error);
@@ -221,6 +221,12 @@ async function verifyEmail(req, res, next) {
       { verificationToken: null }
     );
     return res.status(200).send("User successfully verified");
+    const userForUpdate = await userModel.findByIdAndUpdate(userId, req.body);
+    if (!userForUpdate) {
+      return res.status(404).send();
+    }
+    return res.status(204).send();
+
   } catch (error) {
     next(error);
   }
@@ -238,4 +244,5 @@ module.exports = {
   updateSubscribe,
   updateAvatar,
   verifyEmail,
+
 };

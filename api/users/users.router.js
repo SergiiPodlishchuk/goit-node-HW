@@ -27,9 +27,7 @@ userRouter.post(
   usersControllers.authorization,
   usersControllers.logoutUser
 );
-
 userRouter.get("/auth/verify/:verificationToken", usersControllers.verifyEmail);
-
 userRouter.get(
   "/user/current",
   usersControllers.authorization,
