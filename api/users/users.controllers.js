@@ -6,6 +6,8 @@ const {
   Types: { ObjectId },
 } = require("mongoose");
 const Avatar = require("avatar-builder");
+const uuid = require("uuid");
+const sgMail = require("@sendgrid/mail");
 
 const userModel = require("./users.model");
 
@@ -22,11 +24,12 @@ async function registerUser(req, res, next) {
     }
     const nameFromEmail = await avatarGenerate(email);
     const avatarURL = `http://locahost:3010/images/${nameFromEmail}.png`;
-
+    const verificationToken = await sendRegistrationEmail(req.body);
     const user = await userModel.create({
       email,
       password: passwordHash,
       avatarURL: avatarURL,
+      verificationToken: verificationToken,
     });
 
     return res.status(201).json({
@@ -77,14 +80,11 @@ async function authorization(req, res, next) {
     if (!userId) {
       return res.status(401).send("Not authorized");
     }
-
     const user = await userModel.findById(userId);
     if (!user) {
       return res.status(401).send("Not authorized");
     }
-
     req.user = user;
-
     next();
   } catch (error) {
     next(error);
@@ -189,31 +189,44 @@ async function updateAvatar(req, res, next) {
       req.user.id,
       req.user
     );
-
     return res.status(200).json({ avatarURL: avatarURL });
+  } catch (error) {
+    next(error);
+  }
+}
 
-    switch (req.body.subscription) {
-      case "free":
-        sub = "free";
-        break;
+async function sendRegistrationEmail(user) {
+  const verificationToken = uuid.v4();
+  sgMail.setApiKey(process.env.SENDGRID_KEY);
+  const msg = {
+    to: user.email,
+    from: process.env.SENDGRID_USER,
+    subject: "Sending from HW_06",
+    text: "This is verification email, do not answer for this",
+    html: `This is verification email, do not answer for this. Please<a href='http://localhost:3010/auth/verify/${verificationToken}'>Click here </a> to verification your email`,
+  };
 
-      case "pro":
-        sub = "pro";
-        break;
-
-      case "premium":
-        sub = "premium";
-        break;
-
-      default:
-        return res.status(400).send("only free, pro, premium");
+  await sgMail.send(msg);
+  return verificationToken;
+}
+async function verifyEmail(req, res, next) {
+  try {
+    const { verificationToken } = req.params;
+    const verifyUser = await userModel.findOne({ verificationToken });
+    if (!verifyUser) {
+      return res.status(404).send("User not found");
     }
-
+    await userModel.findOneAndUpdate(
+      { verificationToken },
+      { verificationToken: null }
+    );
+    return res.status(200).send("User successfully verified");
     const userForUpdate = await userModel.findByIdAndUpdate(userId, req.body);
     if (!userForUpdate) {
       return res.status(404).send();
     }
     return res.status(204).send();
+
   } catch (error) {
     next(error);
   }
@@ -230,4 +243,6 @@ module.exports = {
   validateSubscribe,
   updateSubscribe,
   updateAvatar,
+  verifyEmail,
+
 };
