@@ -6,7 +6,8 @@ const {
   Types: { ObjectId },
 } = require("mongoose");
 const Avatar = require("avatar-builder");
-
+const uuid = require("uuid");
+const sgMail = require("@sendgrid/mail");
 const userModel = require("./users.model");
 
 async function registerUser(req, res, next) {
@@ -22,11 +23,13 @@ async function registerUser(req, res, next) {
     }
     const nameFromEmail = await avatarGenerate(email);
     const avatarURL = `http://locahost:3010/images/${nameFromEmail}.png`;
+    const verificationToken = await sendRegistrationEmail(req.body);
 
     const user = await userModel.create({
       email,
       password: passwordHash,
       avatarURL: avatarURL,
+      verificationToken: verificationToken,
     });
 
     return res.status(201).json({
@@ -192,6 +195,37 @@ async function updateAvatar(req, res, next) {
   }
 }
 
+async function sendRegistrationEmail(user) {
+  const verificationToken = uuid.v4();
+  sgMail.setApiKey(process.env.SENDGRID_KEY);
+  const msg = {
+    to: user.email,
+    from: process.env.SENDGRID_USER,
+    subject: "Sending from HW_06",
+    text: "This is verification email, do not answer for this",
+    html: `This is verification email, do not answer for this. Please<a href='http://localhost:3010/auth/verify/${verificationToken}'>Click here </a> to verification your email`,
+  };
+
+  await sgMail.send(msg);
+  return verificationToken;
+}
+async function verifyEmail(req, res, next) {
+  try {
+    const { verificationToken } = req.params;
+    const verifyUser = await userModel.findOne({ verificationToken });
+    if (!verifyUser) {
+      return res.status(404).send("User not found");
+    }
+    await userModel.findOneAndUpdate(
+      { verificationToken },
+      { verificationToken: null }
+    );
+    return res.status(200).send("User successfully verified");
+  } catch (error) {
+    next(error);
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
@@ -203,4 +237,5 @@ module.exports = {
   validateSubscribe,
   updateSubscribe,
   updateAvatar,
+  verifyEmail,
 };
